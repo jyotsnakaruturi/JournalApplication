@@ -26,7 +26,7 @@ public class UserService implements UserDetailsService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public  void saveEntry(User user){
+    public void saveNewUser(User user){
         if (user.getRoles() == null || user.getRoles().isEmpty()) {
             user.setRoles(new ArrayList<>(List.of("USER")));
         }
@@ -34,7 +34,14 @@ public class UserService implements UserDetailsService {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         }
         userRepository.save(user);
+    }
 
+    public void saveUser(User user){
+        userRepository.save(user);
+    }
+
+    public void saveEntry(User user){
+        saveNewUser(user);
     }
 
     public List<User> getAll(){

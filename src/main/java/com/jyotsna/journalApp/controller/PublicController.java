@@ -19,6 +19,6 @@ public class PublicController {
     }
     @PostMapping
     public void cerateUser(@RequestBody User user){
-        userService.saveEntry(user);
+        userService.saveNewUser(user);
     }
 }

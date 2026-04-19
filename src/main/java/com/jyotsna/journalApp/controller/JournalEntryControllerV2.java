@@ -9,11 +9,13 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/journal")
@@ -24,8 +26,10 @@ public class JournalEntryControllerV2 {
     @Autowired
     private UserService userService;
 
-    @GetMapping("/{userName}") // GET /journal/{userName}
-    public ResponseEntity<?> getAllJournalEntriesOfUser(@PathVariable String userName){
+    @GetMapping( ) // GET /journal/{userName}
+    public ResponseEntity<?> getAllJournalEntriesOfUser( ){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
         User user = userService.findByUserName(userName);
         if(user == null){
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -33,8 +37,10 @@ public class JournalEntryControllerV2 {
         List<JournalEntry> all= user.getJournalEntries();
         return new ResponseEntity<>(all != null ? all : List.of(), HttpStatus.OK);
     }
-    @PostMapping("/{userName}") // POST /journal/{userName}
-    public  ResponseEntity<?> createEntry(@RequestBody JournalEntry myEntry,@PathVariable String userName){
+    @PostMapping( ) // POST /journal/{userName}
+    public  ResponseEntity<?> createEntry(@RequestBody JournalEntry myEntry ){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
         User user = userService.findByUserName(userName);
         if(user == null){
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -50,41 +56,64 @@ public class JournalEntryControllerV2 {
 
 
     }
-    @GetMapping("/id/{myId}")
+    @GetMapping("id/{myId}")
     public ResponseEntity<?> getJournalEntryById(@PathVariable ObjectId myId){
-        Optional<JournalEntry>journalEntry = journalEntryService.findById(myId);
-        if(journalEntry.isPresent()){
-            return new ResponseEntity<>(journalEntry.get(), HttpStatus.OK);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        User user = userService.findByUserName(userName);
+        if (user == null || user.getJournalEntries() == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-
+        List<JournalEntry> collect = user.getJournalEntries()
+                .stream()
+                .filter(x -> x.getId().equals(myId))
+                .collect(Collectors.toList());
+        if(!collect.isEmpty()) {
+            Optional<JournalEntry> journalEntry = journalEntryService.findById(myId);
+            if (journalEntry.isPresent()) {
+                return new ResponseEntity<>(journalEntry.get(), HttpStatus.OK);
+            }
+        }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
 
     }
 
-    @DeleteMapping("/id/{userName}/{myId}")
-    public ResponseEntity<?> deleteJournalEntryById(@PathVariable ObjectId myId,@PathVariable String userName){
+    @DeleteMapping("/id/{myId}")
+    public ResponseEntity<?> deleteJournalEntryById(@PathVariable ObjectId myId){
+         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+         String userName = authentication.getName();
          User user = userService.findByUserName(userName);
          if(user == null){
              return new ResponseEntity<>(HttpStatus.NOT_FOUND);
          }
-         journalEntryService.deleteById(myId,userName);
+         boolean deleted = journalEntryService.deleteById(myId,userName);
+         if (!deleted) {
+             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+         }
          return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 
     }
 
-    @PutMapping("/id/{userName}/{id}")
-    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId id,@RequestBody JournalEntry newEntry ,@PathVariable String userName){
-        JournalEntry  old = journalEntryService.findById(id).orElse(null);
-        if(old !=  null){
-            old.setTitle(newEntry.getTitle() != null && !newEntry.getTitle().equals("")? newEntry.getTitle() : old.getTitle());
-            old.setContent(newEntry.getContent() != null && !newEntry.getContent().equals("")? newEntry.getContent() : old.getContent());
-            journalEntryService.saveEntry(old);
-        return new ResponseEntity<>(old,HttpStatus.OK);
+    @PutMapping("/id/{id}")
+    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId id, @RequestBody JournalEntry newEntry){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        User user = userService.findByUserName(userName);
+        if (user == null || user.getJournalEntries() == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-
-
+        boolean ownsEntry = user.getJournalEntries().stream().anyMatch(entry -> entry.getId().equals(id));
+        if (!ownsEntry) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        JournalEntry old = journalEntryService.findById(id).orElse(null);
+        if(old != null){
+            old.setTitle(newEntry.getTitle() != null && !newEntry.getTitle().isBlank() ? newEntry.getTitle() : old.getTitle());
+            old.setContent(newEntry.getContent() != null && !newEntry.getContent().isBlank() ? newEntry.getContent() : old.getContent());
+            journalEntryService.saveEntry(old);
+            return new ResponseEntity<>(old, HttpStatus.OK);
+        }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-
     }
 }
