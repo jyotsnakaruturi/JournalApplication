@@ -27,12 +27,16 @@ public class UserController {
         String userName = authentication.getName();
         User userInDb = userService.findByUserName(userName);
         if(userInDb != null){
-            userInDb.setUsername(user.getUsername());
-            userInDb.setPassword(user.getPassword());
-            userInDb.setRoles(user.getRoles());
-            userService.saveNewUser(userInDb);
+            if (user.getUsername() != null && !user.getUsername().isBlank()) {
+                userInDb.setUsername(user.getUsername());
+            }
+            if (user.getPassword() != null && !user.getPassword().isBlank()) {
+                userInDb.setPassword(user.getPassword());
+            }
+            userService.saveUserWithPasswordEncoding(userInDb);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
     @DeleteMapping()
     public   ResponseEntity<?>  deleteUserById( ){

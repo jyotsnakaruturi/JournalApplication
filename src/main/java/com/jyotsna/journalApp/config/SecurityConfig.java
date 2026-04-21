@@ -25,6 +25,7 @@ public class SecurityConfig {
                         .requestMatchers("/health-check").permitAll()
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/user/**").hasRole("ADMIN")
                         .requestMatchers("/journal/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated()

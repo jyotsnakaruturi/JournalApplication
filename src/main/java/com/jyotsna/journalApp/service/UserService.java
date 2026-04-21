@@ -27,9 +27,7 @@ public class UserService implements UserDetailsService {
     private PasswordEncoder passwordEncoder;
 
     public void saveNewUser(User user){
-        if (user.getRoles() == null || user.getRoles().isEmpty()) {
-            user.setRoles(new ArrayList<>(List.of("USER")));
-        }
+        user.setRoles(new ArrayList<>(List.of("USER")));
         if (user.getPassword() != null && !isEncodedPassword(user.getPassword())) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         }
@@ -37,6 +35,30 @@ public class UserService implements UserDetailsService {
     }
 
     public void saveUser(User user){
+        userRepository.save(user);
+    }
+
+    public void saveUserWithPasswordEncoding(User user){
+        if (user.getPassword() != null && !isEncodedPassword(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+        userRepository.save(user);
+    }
+
+    public void saveAdmin(User user){
+        if (user == null) {
+            throw new IllegalArgumentException("User payload is required");
+        }
+        if (user.getUsername() == null || user.getUsername().isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        user.setRoles(new ArrayList<>(List.of("ADMIN")));
+        if (!isEncodedPassword(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         userRepository.save(user);
     }
 
