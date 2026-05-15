@@ -1,5 +1,6 @@
 package com.jyotsna.journalApp.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NonNull;
 import org.bson.types.ObjectId;
@@ -21,6 +22,7 @@ public class User {
     @NonNull
     private String username;
     @NonNull
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     @DBRef
     private List<JournalEntry> journalEntries = new ArrayList<>();
